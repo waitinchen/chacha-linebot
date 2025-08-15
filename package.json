@@ -1,0 +1,18 @@
+{
+  "name": "chacha-linebot",
+  "version": "1.0.0",
+  "description": "查查 - 數位轉型顧問的智慧分身",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@line/bot-sdk": "^7.5.2",
+    "axios": "^1.5.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
