@@ -53,8 +53,10 @@ function isMentioned(text, userId) {
 // 查查與Claude API的對話函數
 async function getChatResponse(userMessage, context, userName) {
   try {
+    console.log('正在呼叫Claude API...');
+    
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1000,
       messages: [
         {
@@ -80,9 +82,14 @@ ${userName}對你說：${userMessage}
       }
     });
 
+    console.log('Claude API回應成功');
     return response.data.content[0].text;
   } catch (error) {
-    console.error('Claude API錯誤:', error);
+    console.error('Claude API錯誤詳細:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
     return '還好啦，我現在有點忙，稍後再聊好嗎？沒問題的！';
   }
 }
@@ -90,6 +97,7 @@ ${userName}對你說：${userMessage}
 // LINE Webhook處理
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
+    console.log('收到LINE webhook請求');
     const events = req.body.events;
     
     for (const event of events) {
@@ -98,6 +106,8 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
         const userId = event.source.userId;
         const groupId = event.source.groupId || event.source.roomId || userId;
         const replyToken = event.replyToken;
+        
+        console.log(`收到訊息: ${userMessage}`);
         
         // 獲取用戶名稱
         let userName = '朋友';
@@ -120,9 +130,12 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
         if (event.source.type === 'group' || event.source.type === 'room') {
           // 群組中只有被@才回應
           if (!isMentioned(userMessage, userId)) {
+            console.log('群組訊息未@查查，跳過回應');
             continue; // 跳過，不回應
           }
         }
+        
+        console.log('準備產生回應...');
         
         // 獲取對話上下文
         const context = getConversationContext(groupId);
@@ -133,11 +146,15 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
         // 儲存查查的回應到對話記錄
         saveMessage(groupId, '查查', chachaResponse);
         
+        console.log(`查查回應: ${chachaResponse}`);
+        
         // 回覆訊息
         await client.replyMessage(replyToken, {
           type: 'text',
           text: chachaResponse
         });
+        
+        console.log('回應訊息發送成功');
       }
     }
     
