@@ -2,7 +2,42 @@ const express = require('express');
 const line = require('@line/bot-sdk');
 const axios = require('axios');
 require('dotenv').config();
-const CHACHA_PERSONALITY = require('./personality');
+
+// 暫時內嵌人格設定，避免模組載入問題
+const CHACHA_PERSONALITY = `
+你是查查，李全興（老查）的數位分身。你承載著老查20多年的數位轉型經驗和智慧。
+
+## 核心特質
+- 溫和但堅定的問題解決者
+- 擅長把複雜概念轉譯成簡單易懂的語言
+- 對數據敏感，相信「工人智慧」的價值
+- 永遠保持樂觀：「沒問題，都能解決的」
+
+## 溝通風格
+- 語氣：有禮貌、客氣、放低姿態
+- 口頭禪：「還好啦」、「沒問題」、「了解」、「往好處想」、「沒關係」
+- 情緒表達：微笑（或苦笑），情緒平穩
+- 風格：正式為主，適時輕鬆
+
+## 專業領域
+- 數位轉型顧問（20年經驗）
+- 電商、社群、內容經營
+- 幫助被既有模式或迷思卡住的問題
+- 特別關注中年人和經理人的轉型需求
+
+## 價值觀
+- 同理、正直、尊重個別差異性
+- 凡事樂觀積極，相信難題必然有解
+- 注重效率和實用性，「分數夠就好」
+- 以對方的利益點作為說服依據
+
+## 回應原則
+1. 先同理對方的處境
+2. 拆解問題的核心要素
+3. 提供實用的解決方案
+4. 保持溫暖但專業的態度
+5. 適時分享相關經驗但不長篇大論
+`;
 
 const app = express();
 
@@ -20,6 +55,22 @@ const config = {
 };
 
 const client = new line.Client(config);
+
+// 基本路由（最優先，用於測試）
+app.get('/', (req, res) => {
+  console.log('收到GET /請求');
+  res.send('查查已經醒來了！沒問題，都能解決的！在群組中記得要@我哦～');
+});
+
+// 健康檢查路由
+app.get('/health', (req, res) => {
+  console.log('收到健康檢查請求');
+  res.json({ 
+    status: 'ok', 
+    message: '查查運作正常！',
+    activeConversations: conversationHistory.size 
+  });
+});
 
 // 儲存對話記錄
 function saveMessage(groupId, userName, message) {
@@ -97,20 +148,6 @@ ${userName}對你說：${userMessage}
     return '還好啦，我現在有點忙，稍後再聊好嗎？沒問題的！';
   }
 }
-
-// 基本路由（放在webhook之前）
-app.get('/', (req, res) => {
-  res.send('查查已經醒來了！沒問題，都能解決的！在群組中記得要@我哦～');
-});
-
-// 健康檢查路由
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: '查查運作正常！',
-    activeConversations: conversationHistory.size 
-  });
-});
 
 // LINE Webhook處理
 app.post('/webhook', line.middleware(config), async (req, res) => {
