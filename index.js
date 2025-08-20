@@ -6,6 +6,10 @@ const CHACHA_PERSONALITY = require('./personality');
 
 const app = express();
 
+// 添加body parser中間件
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // 儲存群組對話記錄（簡單的記憶體儲存）
 const conversationHistory = new Map();
 
@@ -94,11 +98,30 @@ ${userName}對你說：${userMessage}
   }
 }
 
+// 基本路由（放在webhook之前）
+app.get('/', (req, res) => {
+  res.send('查查已經醒來了！沒問題，都能解決的！在群組中記得要@我哦～');
+});
+
+// 健康檢查路由
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: '查查運作正常！',
+    activeConversations: conversationHistory.size 
+  });
+});
+
 // LINE Webhook處理
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
     console.log('收到LINE webhook請求');
     const events = req.body.events;
+    
+    if (!events || events.length === 0) {
+      console.log('沒有事件需要處理');
+      return res.status(200).send('OK');
+    }
     
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
@@ -163,20 +186,6 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
     console.error('處理訊息錯誤:', error);
     res.status(500).send('錯誤');
   }
-});
-
-// 基本路由
-app.get('/', (req, res) => {
-  res.send('查查已經醒來了！沒問題，都能解決的！在群組中記得要@我哦～');
-});
-
-// 健康檢查路由
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: '查查運作正常！',
-    activeConversations: conversationHistory.size 
-  });
 });
 
 // 啟動服務器
