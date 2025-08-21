@@ -50,7 +50,7 @@ app.use((req, res) => {
 });
 
 // 啟動服務器 - Railway優化
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 const host = '0.0.0.0';
 
 const server = app.listen(port, host, () => {
