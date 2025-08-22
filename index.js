@@ -41,10 +41,6 @@ const CHACHA_PERSONALITY = `
 
 const app = express();
 
-// 添加body parser中間件
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 // 儲存群組對話記錄（簡單的記憶體儲存）
 const conversationHistory = new Map();
 
@@ -56,7 +52,7 @@ const config = {
 
 const client = new line.Client(config);
 
-// 基本路由（最優先，用於測試）
+// 基本路由（不需要body parser）
 app.get('/', (req, res) => {
   console.log('收到GET /請求');
   res.send('查查已經醒來了！沒問題，都能解決的！在群組中記得要@我哦～');
@@ -149,7 +145,7 @@ ${userName}對你說：${userMessage}
   }
 }
 
-// LINE Webhook處理
+// LINE Webhook處理 - 重要：讓LINE middleware自己處理body parsing
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
     console.log('收到LINE webhook請求');
