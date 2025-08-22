@@ -226,7 +226,7 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
 });
 
 // 啟動服務器
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`查查正在港口 ${port} 等候服務！記得在群組中@我哦～`);
 });
