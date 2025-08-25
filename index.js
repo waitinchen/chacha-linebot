@@ -105,9 +105,10 @@ function isMentioned(text, userId) {
 async function getChatResponse(userMessage, context, userName) {
   try {
     console.log('正在呼叫Claude API...');
+    console.log('API Key:', process.env.ANTHROPIC_API_KEY ? 'exists' : 'missing');
     
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-3-5-sonnet-20241022',  // 使用最新模型
       max_tokens: 1000,
       messages: [
         {
@@ -130,18 +131,37 @@ ${userName}對你說：${userMessage}
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
-      }
+      },
+      timeout: 30000  // 30秒超時
     });
 
     console.log('Claude API回應成功');
+    console.log('Response:', response.data);
     return response.data.content[0].text;
+    
   } catch (error) {
     console.error('Claude API錯誤詳細:', {
       message: error.message,
       status: error.response?.status,
-      data: error.response?.data
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers
+      }
     });
-    return '還好啦，我現在有點忙，稍後再聊好嗎？沒問題的！';
+    
+    // 根據不同錯誤提供不同的回應
+    if (error.response?.status === 401) {
+      return '還好啦，我的API金鑰有問題，需要檢查一下。沒關係，等等就好！';
+    } else if (error.response?.status === 404) {
+      return '還好啦，模型找不到，我需要更新一下。沒問題的！';
+    } else if (error.response?.status === 429) {
+      return '還好啦，使用量超過限制了，稍後再試。往好處想，至少證明我很受歡迎！';
+    } else {
+      return '還好啦，我現在有點忙，稍後再聊好嗎？沒問題的！';
+    }
   }
 }
 
@@ -149,6 +169,8 @@ ${userName}對你說：${userMessage}
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
     console.log('收到LINE webhook請求');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     const events = req.body.events;
     
     if (!events || events.length === 0) {
@@ -157,13 +179,15 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
     }
     
     for (const event of events) {
+      console.log('處理事件:', JSON.stringify(event, null, 2));
+      
       if (event.type === 'message' && event.message.type === 'text') {
         const userMessage = event.message.text;
         const userId = event.source.userId;
         const groupId = event.source.groupId || event.source.roomId || userId;
         const replyToken = event.replyToken;
         
-        console.log(`收到訊息: ${userMessage}`);
+        console.log(`收到訊息: ${userMessage} from ${userId}`);
         
         // 獲取用戶名稱
         let userName = '朋友';
@@ -176,8 +200,10 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
             userName = profile.displayName;
           }
         } catch (e) {
-          console.log('無法獲取用戶名稱，使用預設值');
+          console.log('無法獲取用戶名稱，使用預設值:', e.message);
         }
+        
+        console.log(`用戶名稱: ${userName}`);
         
         // 儲存這則訊息到對話記錄
         saveMessage(groupId, userName, userMessage);
@@ -195,6 +221,7 @@ app.post('/webhook', line.middleware(config), async (req, res) => {
         
         // 獲取對話上下文
         const context = getConversationContext(groupId);
+        console.log('對話上下文:', context);
         
         // 獲取查查的回應
         const chachaResponse = await getChatResponse(userMessage, context, userName);
