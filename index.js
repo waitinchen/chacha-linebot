@@ -108,7 +108,7 @@ async function getChatResponse(userMessage, context, userName) {
     console.log('API Key:', process.env.ANTHROPIC_API_KEY ? 'exists' : 'missing');
     
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-3-5-sonnet-20241022',  // 使用最新模型
+      model: 'claude-3-sonnet-20240229',  // 使用穩定的基礎模型
       max_tokens: 1000,
       messages: [
         {
